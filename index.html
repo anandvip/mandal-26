@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenTrack: Meditation Tracker</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --primary-color: #3498db;
+            --secondary-color: #e74c3c;
+        }
+        .dark-theme {
+            --bg-color: #333333;
+            --text-color: #ffffff;
+            --primary-color: #2980b9;
+            --secondary-color: #c0392b;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            margin: 0 auto;
+            transition: background-color 0.3s, color 0.3s;
+            max-width: 1000px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        #signOutBtn {
+            background-color: var(--secondary-color);
+        }
+        input, select, textarea {
+            margin-bottom: 10px;
+            padding: 5px;
+            width: 100%;
+        }
+        .progress-dials {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .dial-container {
+            text-align: center;
+        }
+        .dial {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .dial-bg, .dial-progress {
+            fill: none;
+            stroke: #ddd;
+            stroke-width: 10;
+        }
+        .dial-progress {
+            stroke: var(--primary-color);
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            transition: stroke-dasharray 0.3s;
+        }
+        .dial-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1em;
+            font-weight: bold;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            transition: display 0.3s ease;
+        }
+        .modal-content {
+            background-color: var(--bg-color);
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid var(--primary-color);
+            width: 80%;
+            max-width: 500px;
+            position: relative;
+        }
+        .close {
+            color: var(--secondary-color);
+            position: absolute;
+            top: 10px;
+            right: 25px;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .card {
+            background-color: var(--bg-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+        }
+        .large-card {
+            flex: 2;
+        }
+        #sessionHistory {
+            margin-top: 20px;
+        }
+        .session-entry {
+            background-color: rgba(52, 152, 219, 0.1);
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            position: relative;
+        }
+        .session-note {
+            width: 100%;
+            min-height: 60px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            padding: 5px;
+        }
+        .delete-btn, .save-note-btn {
+            padding: 5px 10px;
+            margin-right: 5px;
+        }
+        .delete-btn {
+            background-color: var(--secondary-color);
+        }
+        #sessionControls {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        button#startSession, button#stopSession {
+            margin-top: 60px;
+        }
+        #sessionMedia, #sessionMediaPlaylist {
+            margin-top: 20px;
+        }
+        .tag {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 5px;
+        }
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 2px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            bottom: 30px;
+            font-size: 17px;
+        }
+        .toast.show {
+            visibility: visible;
+            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+        .toast.success {
+            background-color: #4CAF50;
+        }
+        .toast.error {
+            background-color: #f44336;
+        }
+        .toast.info {
+            background-color: #2196F3;
+        }
+        .toast.warning {
+            background-color: #ff9800;
+        }
+        @-webkit-keyframes fadein {
+            from { bottom: 0; opacity: 0; }
+            to { bottom: 30px; opacity: 1; }
+        }
+        @keyframes fadein {
+            from { bottom: 0; opacity: 0; }
+            to { bottom: 30px; opacity: 1; }
+        }
+        @-webkit-keyframes fadeout {
+            from { bottom: 30px; opacity: 1; }
+            to { bottom: 0; opacity: 0; }
+        }
+        @keyframes fadeout {
+            from { bottom: 30px; opacity: 1; }
+            to { bottom: 0; opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ZenTrack</h1>
+        <div class="header-buttons">
+            <button id="themeToggle">Toggle Theme</button>
+            <button id="signOutBtn">Sign Out</button>
+        </div>
+    </header>
+
+    <div id="mandalCreation">
+        <h2>Create New Mandal</h2>
+        <label for="userName">User Name:</label>
+        <input type="text" id="userName" required>
+        <label for="mandalName">Mandal Name:</label>
+        <input type="text" id="mandalNameInput" required>
+        <label for="mandalChoice">Select Duration:</label>
+        <select id="mandalChoice" required>
+            <option value="48">48 Days / 96 Sessions</option>
+            <option value="90">90 Days / 90 Sessions</option>
+        </select>
+        <label for="mandalStartDate">Start Date:</label>
+        <input type="date" id="mandalStartDateInput" required>
+        <button id="createMandalBtn">Start Mandal</button>
+    </div>
+
+    <div id="mandalInfo" style="display:none;">
+        <div class="card-container">
+            <div class="card">
+                <h2>Active Mandal: <span id="mandalName"></span></h2>
+            </div>
+            <div class="card">
+                <p>Start Date: <span id="startDate"></span></p>
+            </div>
+            <div class="card">
+                <p>End Date: <span id="endDate"></span></p>
+            </div>
+            <div class="card large-card">
+                <p>Days Remaining: <span id="daysRemaining"></span></p>
+            </div>
+            <div class="card">
+                <p>Day Today: <span id="todayDay"></span></p>
+            </div>
+            <div class="card">
+                <button id="deleteMandalBtn">Delete Mandal</button>
+            </div>
+            <div class="card">
+                <button id="openPastSessionModal">Add Past</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="progress-dials">
+        <div class="dial-container">
+            <div class="dial">
+                <svg viewBox="0 0 100 100">
+                    <circle class="dial-bg" cx="50" cy="50" r="45"/>
+                    <circle id="mandalProgressDial" class="dial-progress" cx="50" cy="50" r="45"/>
+                </svg>
+                <div id="mandalProgressText" class="dial-text">0%</div>
+            </div>
+            <p>Mandal Progress</p>
+        </div>
+        <div class="dial-container">
+            <div class="dial">
+                <svg viewBox="0 0 100 100">
+                    <circle class="dial-bg" cx="50" cy="50" r="45"/>
+                    <circle id="dailyProgressDial" class="dial-progress" cx="50" cy="50" r="45"/>
+                </svg>
+                <div id="dailyProgressText" class="dial-text">0%</div>
+            </div>
+            <p>Daily Progress</p>
+        </div>
+        <div class="dial-container">
+            <div class="dial">
+                <svg viewBox="0 0 100 100">
+                    <circle class="dial-bg" cx="50" cy="50" r="45"/>
+                    <circle id="sessionProgressDial" class="dial-progress" cx="50" cy="50" r="45"/>
+                </svg>
+                <div id="sessionProgressText" class="dial-text">0:00</div>
+            </div>
+            <p>Session Progress</p>
+        </div>
+    </div>
+
+    <div id="sessionControls">
+        <button id="startSession">Start Session</button>
+        <button id="stopSession" style="display:none;">Stop Session</button>
+    </div>
+
+    <div id="sessionMedia">
+        <h3>Session Media</h3>
+        <!-- Placeholder for session media content -->
+    </div>
+
+    <div id="sessionMediaPlaylist">
+        <h3>Session Media Playlist</h3>
+        <!-- Placeholder for session media playlist content -->
+    </div>
+
+    <div id="sessionHistory">
+        <h3>Session History</h3>
+        <input type="text" id="searchNotes" placeholder="Search notes">
+        <button id="sortDateAsc">Sort by Date Ascending</button>
+        <button id="sortDateDesc">Sort by Date Descending</button>
+        <button id="sortByNotes">Sort by Notes</button>
+        <div id="sessionList"></div>
+    </div>
+
+    <div id="addPastSessionModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Add Past Session</h3>
+            <input type="date" id="pastDate" required>
+            <input type="number" id="pastDuration" placeholder="Duration (minutes)" value="14" required>
+            <input type="number" id="pastSeconds" placeholder="Duration (seconds)" value="33" required>
+            <label><input type="checkbox" id="pastMorning"> Morning</label>
+            <label><input type="checkbox" id="pastEvening"> Evening</label>
+            <textarea id="pastReflection" placeholder="Reflection (optional)"></textarea>
+            <button id="addPastSessionBtn">Add Past Session</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const userNameInput = document.getElementById('userName');
+        const mandalNameInput = document.getElementById('mandalNameInput');
+        const mandalChoiceSelect = document.getElementById('mandalChoice');
+        const mandalStartDateInput = document.getElementById('mandalStartDateInput');
+        const createMandalBtn = document.getElementById('createMandalBtn');
+        const deleteMandalBtn = document.getElementById('deleteMandalBtn');
+
+        const mandalName = document.getElementById('mandalName');
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        const daysRemaining = document.getElementById('daysRemaining');
+        const todayDay = document.getElementById('todayDay');
+        const startSessionBtn = document.getElementById('startSession');
+        const stopSessionBtn = document.getElementById('stopSession');
+        const addPastSessionBtn = document.getElementById('addPastSessionBtn');
+        const themeToggle = document.getElementById('themeToggle');
+        const signOutBtn = document.getElementById('signOutBtn');
+        const sessionList = document.getElementById('sessionList');
+
+        const addPastSessionModal = document.getElementById('addPastSessionModal');
+        const openPastSessionModalBtn = document.getElementById('openPastSessionModal');
+        const closeModalBtn = document.getElementsByClassName('close')[0];
+
+        // Progress Dials
+        const mandalProgressDial = document.getElementById('mandalProgressDial');
+        const mandalProgressText = document.getElementById('mandalProgressText');
+        const dailyProgressDial = document.getElementById('dailyProgressDial');
+        const dailyProgressText = document.getElementById('dailyProgressText');
+        const sessionProgressDial = document.getElementById('sessionProgressDial');
+        const sessionProgressText = document.getElementById('sessionProgressText');
+
+        // Global variables
+        let activeMandal = null;
+        let sessionStart = null;
+        let sessionInterval = null;
+
+        // Event Listeners
+        createMandalBtn.addEventListener('click', createMandal);
+        deleteMandalBtn.addEventListener('click', deleteMandal);
+        startSessionBtn.addEventListener('click', startSession);
+        stopSessionBtn.addEventListener('click', stopSession);
+        addPastSessionBtn.addEventListener('click', addPastSession);
+        themeToggle.addEventListener('click', toggleTheme);
+        signOutBtn.addEventListener('click', signOut);
+        openPastSessionModalBtn.addEventListener('click', () => addPastSessionModal.style.display = 'block');
+        closeModalBtn.addEventListener('click', () => addPastSessionModal.style.display = 'none');
+        window.addEventListener('click', (event) => {
+            if (event.target === addPastSessionModal) {
+                addPastSessionModal.style.display = 'none';
+            }
+        });
+
+        // Functions
+        function initializeApp() {
+            loadMandal();
+            updateUI();
+        }
+
+        function loadMandal() {
+            const storedMandal = localStorage.getItem('activeMandal');
+            if (storedMandal) {
+                activeMandal = JSON.parse(storedMandal);
+                document.getElementById('mandalCreation').style.display = 'none';
+                document.getElementById('mandalInfo').style.display = 'block';
+            } else {
+                document.getElementById('mandalCreation').style.display = 'block';
+                document.getElementById('mandalInfo').style.display = 'none';
+            }
+        }
+
+        function createMandal() {
+            const userName = userNameInput.value;
+            const name = mandalNameInput.value;
+            const choice = mandalChoiceSelect.value;
+            const duration = choice === '48' ? 48 : 90;
+            const sessions = choice === '48' ? 96 : 90;
+            const startDateValue = new Date(mandalStartDateInput.value);
+            createNewMandal(userName, name, duration, sessions, startDateValue);
+            updateUI();
+            showToast('Mandal created successfully!', 'success');
+        }
+
+        function createNewMandal(userName, name, duration, sessions, startDate) {
+            const endDate = new Date(startDate);
+            endDate.setDate(endDate.getDate() + duration - 1);
+
+            activeMandal = {
+                userName: userName,
+                name: name,
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                duration: duration,
+                sessions: sessions,
+                completedSessions: 0,
+                sessionsDetails: []
+            };
+            saveMandal();
+        }
+
+        function saveMandal() {
+            localStorage.setItem('activeMandal', JSON.stringify(activeMandal));
+        }
+
+        function deleteMandal() {
+            if (confirm('Are you sure you want to delete this mandal?')) {
+                localStorage.removeItem('activeMandal');
+                activeMandal = null;
+                updateUI();
+                showToast('Mandal deleted successfully!', 'error');
+                document.getElementById('mandalCreation').style.display = 'block';
+                document.getElementById('mandalInfo').style.display = 'none';
+            }
+        }
+
+        function updateUI() {
+            if (!activeMandal) return;
+
+            mandalName.textContent = activeMandal.name;
+            startDate.textContent = new Date(activeMandal.startDate).toLocaleDateString();
+            endDate.textContent = new Date(activeMandal.endDate).toLocaleDateString();
+
+            const now = new Date();
+            const start = new Date(activeMandal.startDate);
+            const end = new Date(activeMandal.endDate);
+            const totalDays = (end - start) / (1000 * 60 * 60 * 24);
+            const elapsedDays = Math.min(totalDays, Math.max(0, (now - start) / (1000 * 60 * 60 * 24)));
+
+            daysRemaining.textContent = Math.max(0, Math.ceil(totalDays - elapsedDays));
+            todayDay.textContent = Math.ceil(elapsedDays);
+
+            updateProgressDial(mandalProgressDial, mandalProgressText, elapsedDays / totalDays);
+            updateDailyProgress();
+            renderSessionHistory();
+        }
+
+        function updateProgressDial(dialElement, textElement, progress) {
+            const circumference = 2 * Math.PI * 45;
+            dialElement.style.strokeDasharray = `${circumference} ${circumference}`;
+            dialElement.style.strokeDashoffset = circumference * (1 - progress);
+            textElement.textContent = `${Math.round(progress * 100)}%`;
+        }
+
+        function updateDailyProgress() {
+            const today = new Date().toDateString();
+            const todaySessions = activeMandal.sessionsDetails.filter(session => new Date(session.date).toDateString() === today);
+            const totalDuration = todaySessions.reduce((sum, session) => sum + session.duration, 0);
+            const dailyGoal = 30; // Assuming 30 minutes daily goal
+            updateProgressDial(dailyProgressDial, dailyProgressText, Math.min(1, totalDuration / dailyGoal));
+        }
+
+        function renderSessionHistory() {
+            sessionList.innerHTML = '';
+            activeMandal.sessionsDetails.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach((session, index) => {
+                const sessionEntry = document.createElement('div');
+                sessionEntry.className = 'session-entry';
+                const tags = session.reflection ? session.reflection.split(' ').filter(word => word.startsWith('#')).map(tag => `<span class="tag">${tag}</span>`).join(' ') : '';
+                sessionEntry.innerHTML = `
+                    <p>Date: ${new Date(session.date).toLocaleString()}</p>
+                    <p>Duration: ${session.duration} minutes</p>
+                    <p>Phase: ${session.phase}</p>
+                    <div>${tags}</div>
+                    <textarea class="session-note" data-index="${index}">${session.reflection || ''}</textarea>
+                    <button class="save-note-btn" data-index="${index}">Save Note</button>
+                    <button class="delete-btn" data-index="${index}">Delete Session</button>
+                `;
+                sessionList.appendChild(sessionEntry);
+            });
+
+            // Add event listeners to buttons
+            document.querySelectorAll('.save-note-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => saveNote(parseInt(e.target.dataset.index)));
+            });
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => deleteSession(parseInt(e.target.dataset.index)));
+            });
+        }
+
+        function startSession() {
+            sessionStart = new Date();
+            startSessionBtn.style.display = 'none';
+            stopSessionBtn.style.display = 'inline-block';
+            sessionInterval = setInterval(updateSessionProgress, 1000);
+            showToast('Session started!', 'info');
+        }
+
+        function stopSession() {
+            clearInterval(sessionInterval);
+            const sessionEnd = new Date();
+            const duration = Math.round((sessionEnd - sessionStart) / 60000); // in minutes
+
+            activeMandal.sessionsDetails.push({
+                date: sessionStart.toISOString(),
+                duration: duration,
+                phase: sessionStart.getHours() < 12 ? 'morning' : 'evening',
+                reflection: ''
+            });
+            activeMandal.completedSessions++;
+
+            saveMandal();
+            updateUI();
+            showToast('Session completed successfully!', 'success');
+            
+            startSessionBtn.style.display = 'inline-block';
+            stopSessionBtn.style.display = 'none';
+            updateProgressDial(sessionProgressDial, sessionProgressText, 0);
+        }
+
+        function updateSessionProgress() {
+            const elapsed = (new Date() - sessionStart) / 60000; // in minutes
+            const progress = Math.min(1, elapsed / 30); // Assuming 30-minute session goal
+            updateProgressDial(sessionProgressDial, sessionProgressText, progress);
+            const minutes = Math.floor(elapsed);
+            const seconds = Math.floor((elapsed - minutes) * 60);
+            sessionProgressText.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function addPastSession() {
+            const date = new Date(document.getElementById('pastDate').value);
+            const duration = parseInt(document.getElementById('pastDuration').value) * 60 + parseInt(document.getElementById('pastSeconds').value);
+            const phase = document.getElementById('pastMorning').checked ? 'morning' : 'evening';
+            const reflection = document.getElementById('pastReflection').value.trim();
+
+            activeMandal.sessionsDetails.push({
+                date: date.toISOString(),
+                duration: duration,
+                phase: phase,
+                reflection: reflection
+            });
+            activeMandal.completedSessions++;
+
+            saveMandal();
+            updateUI();
+            showToast('Past session added successfully!', 'success');
+            
+            addPastSessionModal.style.display = 'none';
+
+            // Clear input fields
+            document.getElementById('pastDate').value = '';
+            document.getElementById('pastDuration').value = 14;
+            document.getElementById('pastSeconds').value = 33;
+            document.getElementById('pastMorning').checked = false;
+            document.getElementById('pastEvening').checked = false;
+            document.getElementById('pastReflection').value = '';
+        }
+
+        function saveNote(index) {
+            const noteTextarea = document.querySelector(`.session-note[data-index="${index}"]`);
+            activeMandal.sessionsDetails[index].reflection = noteTextarea.value.trim();
+            saveMandal();
+            updateUI();
+            showToast('Note saved successfully!', 'success');
+        }
+
+        function deleteSession(index) {
+            if (confirm('Are you sure you want to delete this session?')) {
+                activeMandal.sessionsDetails.splice(index, 1);
+                saveMandal();
+                updateUI();
+                showToast('Session deleted successfully!', 'error');
+            }
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            showToast('Theme toggled!', 'info');
+        }
+
+        function signOut() {
+            alert('Sign out functionality is not implemented.');
+            showToast('Sign out is not implemented yet!', 'warning');
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        document.body.removeChild(toast);
+                    }, 300);
+                }, 3000);
+            }, 100);
+        }
+
+        // Initialize the app
+        initializeApp();
+    </script>
+</body>
+</html>
